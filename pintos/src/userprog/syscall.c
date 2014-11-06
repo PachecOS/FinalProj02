@@ -37,7 +37,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 {
   printf("Syscall handler has beeen hit. MAN DOWN!!\n");
   int arg[3];
- int esp = mem_switch_to_kernel((const void*) f->esp);
+  int esp = mem_switch_to_kernel((const void*) f->esp);
   switch(*(int *) esp)
   {
   	case SYS_HALT:
@@ -104,6 +104,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   	{
   		printf("MAN IS UP NOW!!!\n");
   		f->eax = write(arg[0], (const void *) arg[1], (unsigned) arg[2]);
+  		printf("The arg in arg[0] is : %d\n", arg[0]);
   		break;
   	}
   	case SYS_SEEK:

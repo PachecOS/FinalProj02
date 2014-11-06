@@ -88,12 +88,11 @@ start_process (void *file_name_)
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load(save_ptr, &if_.eip, &if_.esp);
-  //bool **setup = setup_stack((void **) if_.esp);
 
   /* If load failed, quit. */
-  palloc_free_page (save_ptr);
   if (!success)
   { 
+    palloc_free_page (save_ptr);
     printf("i am doing a thread exit.\n");
     sema_up(&(ss->start_synch));
     thread_exit ();
@@ -110,11 +109,13 @@ start_process (void *file_name_)
 
   // Iterate each token
   for(token = (char*) save_ptr; token != NULL; 
-                                  token = strtok_r(NULL, " ", &save_ptr))
+                                  token = strtok_r("", " ", &save_ptr))
   {
+    printf("Token : %s\n", token);
     if_.esp = if_.esp - (strlen(token) + 1);
     argv[argc] = if_.esp;
     argc++;
+    printf("Arg count is: %d\n", argc);
 
     // If the size of argc is greater than 2 bits
     if(argc >= bits)
@@ -126,6 +127,7 @@ start_process (void *file_name_)
     }    
     // Copy the token (args) in to the save_ptry (the stack)
     memcpy(if_.esp, token, (strlen(token) +1));
+    printf("This is on the stack: %s\n", if_.esp);
   }
 
   // Need to set the last arg to 0 before setting 
@@ -138,6 +140,8 @@ start_process (void *file_name_)
     word_align = 0;
   }
   memcpy(if_.esp, &argv[argc], word_align);
+  printf("The pointer of esp is at: %d\n", argv[argc]);
+
   
   /* Now we need to push on argv[n], argv[n-1]...argv[0] */
 
@@ -145,21 +149,27 @@ start_process (void *file_name_)
   {
     if_.esp -= sizeof(char*);
     memcpy(if_.esp, &argv[i], sizeof(char*));
+    printf("Each entry of argv: %s\n", argv[i]);
   }
 
   // Push on argv
-  char *temp = if_.esp;
+  char *temp = (char *)if_.esp;
   if_.esp -= sizeof(char**);
-  memcpy(if_.esp, &temp, sizeof(char**));
+  memcpy(if_.esp, temp, sizeof(char**));
+  printf("Pushed on argv: %s\n", temp);
 
   // Push on argc
   if_.esp -= sizeof(int);
   memcpy(if_.esp, &argc, sizeof(int));
+  printf("Pushed on argc: %d\n", argc);
 
 
   // Push on return address
   if_.esp -= sizeof(void *);
   memcpy(if_.esp, &argv[argc] , sizeof(void*));
+  printf("Fake return addr: %d\n", argv[argc]);
+
+
 
 
   free(argv);
