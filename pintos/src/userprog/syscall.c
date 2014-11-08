@@ -226,17 +226,16 @@ halt(void)
 void
 exit (int status) 
 {
-  struct thread *curr_thread = thread_current();
+ struct thread *curr_thread = thread_current();
+ struct list_elem *e;
 
-  /*if (thread_alive(curr_thread->parent))
-  {
-  	if(curr_thread->child)
-  	{
-  		curr_thread->child->status = status;
-  	}
-  }
+ if (curr_thread->parent)
+ {
+ 	 curr_thread->status = status;
+ }  
 
-  thread_exit(); */
+  printf ("%s: exit(%d)\n", curr_thread->name, status);
+  thread_exit();
 }
 /* Runs the executable whose name is given in cmd_line*/
 pid_t

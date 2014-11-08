@@ -81,6 +81,7 @@ start_process (void *file_name_)
   char *save_ptr = ss->fn_copy;
   bool success = ss->success;
   bool setup = false;
+  printf("The save_ptr is: %s\n", save_ptr);
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -109,8 +110,8 @@ start_process (void *file_name_)
   int bits = 2;
 
   // Iterate each token
-  for(token = (char*) save_ptr; token != NULL; 
-                                  token = strtok_r("", " ", &save_ptr))
+  for(token = strtok_r(NULL, " ", &save_ptr); token != NULL; 
+                                  token = strtok_r(NULL, " ", &save_ptr))
   {
     printf("Token : %s\n", token);
     if_.esp -= (strlen(token) + 1);
@@ -235,9 +236,9 @@ wait_info_init(struct wait_info *w_info)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  struct thread *t = thread_current();
-  struct list_elem *e;
-  wait_resources_init(&t->w_info);
+  //struct thread *t = thread_current();
+  //struct list_elem *e;
+  //wait_resources_init(&t->w_info);
 
   return -1;
 }
