@@ -61,11 +61,12 @@ process_execute (const char *file_name)
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file, PRI_DEFAULT, start_process, &start);
 
-  sema_down(&(start.start_synch));
   if (tid == TID_ERROR)
   {
     palloc_free_page (fn_copy); 
   }
+
+  sema_down(&(start.start_synch));
   return tid;
 }
 
@@ -112,7 +113,7 @@ start_process (void *file_name_)
                                   token = strtok_r("", " ", &save_ptr))
   {
     printf("Token : %s\n", token);
-    if_.esp = if_.esp - (strlen(token) + 1);
+    if_.esp -= (strlen(token) + 1);
     argv[argc] = if_.esp;
     argc++;
     printf("Arg count is: %d\n", argc);
@@ -134,34 +135,55 @@ start_process (void *file_name_)
   // the arg array on the stack
   argv[argc] = 0;
 
-  while(!(((uint32_t) if_.esp % 4) == 0))
-  {
-    word_align =(int) -- if_.esp;
-    word_align = 0;
-  }
-  memcpy(if_.esp, &argv[argc], word_align);
-  printf("The pointer of esp is at: %d\n", argv[argc]);
+  //printf("IF_ before word_align is: %X\n", if_.esp);
 
+  if ((uint32_t) if_.esp % 4 != 0) {
+
+
+  	word_align = (uint32_t) if_.esp % 4;
+
+  	if_.esp -= word_align;
+
+    memcpy(if_.esp, &argv[argc], word_align);
+
+  }
+
+  //printf("IF_ before argv[argc] is: %X\n", if_.esp); 
   
+
+  //printf("IF_ before args is: %X\n", if_.esp);
+
+
   /* Now we need to push on argv[n], argv[n-1]...argv[0] */
 
-  for(i = argc-1; i >= 0; i--)
+  for(i = argc; i >= 0; i--)
   {
     if_.esp -= sizeof(char*);
     memcpy(if_.esp, &argv[i], sizeof(char*));
     printf("Each entry of argv: %s\n", argv[i]);
+
+    //printf("IF_%d is: %X\n", i, if_.esp);
+
+
   }
 
   // Push on argv
-  char *temp = (char *)if_.esp;
+
+  char *temp;
+  temp = if_.esp;
   if_.esp -= sizeof(char**);
-  memcpy(if_.esp, temp, sizeof(char**));
-  printf("Pushed on argv: %s\n", temp);
+  memcpy(if_.esp, &temp, sizeof(char**));
+  //printf("Pushed on argv: %X\n", if_.esp);
+
+
+  //printf("After argv is pushed: %X\n", if_.esp);
 
   // Push on argc
   if_.esp -= sizeof(int);
   memcpy(if_.esp, &argc, sizeof(int));
   printf("Pushed on argc: %d\n", argc);
+
+  //printf("Pushed on argc: %X\n", if_.esp);
 
 
   // Push on return address
@@ -169,7 +191,9 @@ start_process (void *file_name_)
   memcpy(if_.esp, &argv[argc] , sizeof(void*));
   printf("Fake return addr: %d\n", argv[argc]);
 
+  //printf("Pushed on fake return address: %X\n", if_.esp);
 
+  hex_dump(if_.esp, if_.esp, 32, true);
 
 
   free(argv);

@@ -14,8 +14,8 @@
 #include "userprog/pagedir.h"
 #include "userprog/process.h"
 
-#define Phys 0xc0000000
 #define BOTTOM 0x08048000
+
 
 static void syscall_handler (struct intr_frame *);
 void syscall_init (void);
@@ -23,6 +23,7 @@ int mem_switch_to_kernel(const void * ptr );
 void check_ptr(const void* addr);
 void strip_args(struct intr_frame *f, int total, int* arg);
 struct file* get_file (int fd);
+void check_arg(const void* arg);
 
 void
 syscall_init (void) 
@@ -35,25 +36,28 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
-  printf("Syscall handler has beeen hit. MAN DOWN!!\n");
   int arg[3];
   int esp = mem_switch_to_kernel((const void*) f->esp);
   switch(*(int *) esp)
   {
   	case SYS_HALT:
   	{
+  		printf("HALT\n");
   		halt();
   		break;
   	}
   	case SYS_EXIT:
-  	{
+  	{  		
+  		printf("EXIT\n");
   		strip_args(f, 1, &arg[0]);
   		exit(arg[0]);
   		break;
   	}
   	case SYS_EXEC:
   	{
+  		printf("EXEC\n");
   		strip_args(f, 1, &arg[0]);
+  		check_arg((const void*) arg[0]);
 
   		arg[0] = mem_switch_to_kernel((const void*)arg[0]);
   		f->eax = exec((const char*) arg[0]);
@@ -61,13 +65,16 @@ syscall_handler (struct intr_frame *f UNUSED)
   	}
   	case SYS_WAIT:
   	{
+  		printf("WAIT\n");
   		strip_args(f, 1, &arg[0]);
   		f->eax = wait(arg[0]);
   		break;
   	}
   	case SYS_REMOVE:
   	{
+  		printf("REMOVE\n");
   		strip_args(f, 1, &arg[0]);
+  		check_arg((const void*) arg[0]);
 
   		arg[0] = mem_switch_to_kernel((const void*) arg[0]);
   		f->eax = remove((const char*) arg[0]);
@@ -75,7 +82,9 @@ syscall_handler (struct intr_frame *f UNUSED)
   	}
   	case SYS_CREATE:
   	{
+  		printf("CREATE\n");
   		strip_args(f, 2, &arg[0]);
+  		check_arg((const void*) arg[0]);
 
   		arg[0] = mem_switch_to_kernel((const void*) arg[0]);
   		f->eax = create((const char*) arg[0], (unsigned)arg[1]);
@@ -83,7 +92,9 @@ syscall_handler (struct intr_frame *f UNUSED)
   	}
   	case SYS_OPEN:
   	{
+  		printf("OPEN\n");
   		strip_args(f, 1, &arg[0]);
+  		check_arg((const void*) arg[0]);
 
   		arg[0] = mem_switch_to_kernel((const void*) arg[0]);
   		f->eax = open((const char *) arg[0]);
@@ -91,42 +102,61 @@ syscall_handler (struct intr_frame *f UNUSED)
   	}
   	case SYS_FILESIZE:
   	{
-  		strip_args(f, 3, &arg[0]);
+  		printf("FILESIZE\n");
+  		strip_args(f, 1, &arg[0]);
   		f->eax = filesize(arg[0]);
   		break;
   	}
   	case SYS_READ:
   	{
+  		printf("READ\n");
+  		strip_args(f, 3, &arg[0]);
+
+  		arg[1] = mem_switch_to_kernel((const void *) arg[1]);
   		f->eax = read(arg[0], (void *) arg[1], (unsigned) arg[2]);
   		break;
   	}
   	case SYS_WRITE:
   	{
-  		printf("MAN IS UP NOW!!!\n");
+  		printf("WRITE\n");
+  		strip_args(f, 3, &arg[0]);
+
+  		arg[1] = mem_switch_to_kernel((const void *) arg[1]);
   		f->eax = write(arg[0], (const void *) arg[1], (unsigned) arg[2]);
-  		printf("The arg in arg[0] is : %d\n", arg[0]);
   		break;
   	}
   	case SYS_SEEK:
   	{
+  		printf("SEEK\n");
   		strip_args(f, 2, &arg[0]);
   		seek(arg[0], (unsigned) arg[1]);
   		break;
   	}
   	case SYS_TELL:
   	{
+  		printf("TELL\n");
   		strip_args(f, 1, &arg[0]);
   		f->eax = tell(arg[0]);
   		break;
   	}
   	case SYS_CLOSE:
   	{
+  		printf("CLOSE\n");
   		strip_args(f, 1, &arg[0]);
   		close(arg[0]);
   		break;
   	}
 
   }
+}
+
+void
+check_arg(const void* arg) {
+
+	while (* (char *) mem_switch_to_kernel(arg) != 0)
+	{
+		arg = (char *) arg + 1;
+	}
 }
 
 /* The purpose of this funciton is to get the
@@ -136,11 +166,14 @@ syscall_handler (struct intr_frame *f UNUSED)
 int
 mem_switch_to_kernel(const void * ptr )
 {
+
+	check_ptr(ptr);
+
 	struct thread *t = thread_current();
 	uint32_t page = (uint32_t)t->pagedir;
 	void * valid = pagedir_get_page((uint32_t *)page, ptr);
 
-	if(valid == NULL)
+	if(!valid)
 	{
 		exit(-1);
 	} 
@@ -157,8 +190,11 @@ check_ptr(const void* addr)
 	{
 		exit(-1);
 	}
-
-	if(!(addr < (void *)Phys))
+	if(!(addr < (void *)PHYS_BASE))
+	{
+		exit(-1);
+	}
+	if(!is_user_vaddr(addr))
 	{
 		exit(-1);
 	}
@@ -190,13 +226,21 @@ halt(void)
 void
 exit (int status) 
 {
-	status = 1;
+  struct thread *curr_thread = thread_current();
+  struct list_elem *e;
+
+  if (curr_thread->parent)
+    curr_thread->status = status;
+
+
+  thread_exit();
 }
 /* Runs the executable whose name is given in cmd_line*/
 pid_t
 exec(const char* cmd_line)
 {
 	pid_t name = process_execute(cmd_line);
+
 	return name;
 		
 }
