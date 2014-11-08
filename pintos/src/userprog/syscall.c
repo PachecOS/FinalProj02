@@ -30,7 +30,7 @@ syscall_init (void)
 {
   lock_init(&lock);
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
-  printf("I am here. ");
+  //printf("I am here. ");
 }
 
 static void
@@ -42,20 +42,20 @@ syscall_handler (struct intr_frame *f UNUSED)
   {
   	case SYS_HALT:
   	{
-  		printf("HALT\n");
+  		//printf("HALT\n");
   		halt();
   		break;
   	}
   	case SYS_EXIT:
   	{  		
-  		printf("EXIT\n");
+  		//printf("EXIT\n");
   		strip_args(f, 1, &arg[0]);
   		exit(arg[0]);
   		break;
   	}
   	case SYS_EXEC:
   	{
-  		printf("EXEC\n");
+  		//printf("EXEC\n");
   		strip_args(f, 1, &arg[0]);
   		check_arg((const void*) arg[0]);
 
@@ -65,14 +65,14 @@ syscall_handler (struct intr_frame *f UNUSED)
   	}
   	case SYS_WAIT:
   	{
-  		printf("WAIT\n");
+  		//printf("WAIT\n");
   		strip_args(f, 1, &arg[0]);
   		f->eax = wait(arg[0]);
   		break;
   	}
   	case SYS_REMOVE:
   	{
-  		printf("REMOVE\n");
+  		//printf("REMOVE\n");
   		strip_args(f, 1, &arg[0]);
   		check_arg((const void*) arg[0]);
 
@@ -82,7 +82,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   	}
   	case SYS_CREATE:
   	{
-  		printf("CREATE\n");
+  		//printf("CREATE\n");
   		strip_args(f, 2, &arg[0]);
   		check_arg((const void*) arg[0]);
 
@@ -92,7 +92,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   	}
   	case SYS_OPEN:
   	{
-  		printf("OPEN\n");
+  		//printf("OPEN\n");
   		strip_args(f, 1, &arg[0]);
   		check_arg((const void*) arg[0]);
 
@@ -102,14 +102,14 @@ syscall_handler (struct intr_frame *f UNUSED)
   	}
   	case SYS_FILESIZE:
   	{
-  		printf("FILESIZE\n");
+  		//printf("FILESIZE\n");
   		strip_args(f, 1, &arg[0]);
   		f->eax = filesize(arg[0]);
   		break;
   	}
   	case SYS_READ:
   	{
-  		printf("READ\n");
+  		//printf("READ\n");
   		strip_args(f, 3, &arg[0]);
 
   		arg[1] = mem_switch_to_kernel((const void *) arg[1]);
@@ -118,7 +118,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   	}
   	case SYS_WRITE:
   	{
-  		printf("WRITE\n");
+  		//printf("WRITE\n");
   		strip_args(f, 3, &arg[0]);
 
   		arg[1] = mem_switch_to_kernel((const void *) arg[1]);
@@ -127,21 +127,21 @@ syscall_handler (struct intr_frame *f UNUSED)
   	}
   	case SYS_SEEK:
   	{
-  		printf("SEEK\n");
+  		//printf("SEEK\n");
   		strip_args(f, 2, &arg[0]);
   		seek(arg[0], (unsigned) arg[1]);
   		break;
   	}
   	case SYS_TELL:
   	{
-  		printf("TELL\n");
+  		//printf("TELL\n");
   		strip_args(f, 1, &arg[0]);
   		f->eax = tell(arg[0]);
   		break;
   	}
   	case SYS_CLOSE:
   	{
-  		printf("CLOSE\n");
+  		//printf("CLOSE\n");
   		strip_args(f, 1, &arg[0]);
   		close(arg[0]);
   		break;

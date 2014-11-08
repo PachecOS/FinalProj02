@@ -37,7 +37,7 @@ struct start_struct {
 tid_t
 process_execute (const char *file_name) 
 {
-  printf("I am starting execute.\n");
+  //printf("I am starting execute.\n");
   // Need to modify this method
   char *fn_copy;
   char *parse;
@@ -50,6 +50,7 @@ process_execute (const char *file_name)
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
+
   // Initialize the start struct and update its members
   sema_init(&(start.start_synch), 0);
   start.fn_copy = (char *)fn_copy;
@@ -75,13 +76,23 @@ process_execute (const char *file_name)
 static void
 start_process (void *file_name_)
 {
+
   struct start_struct *ss = file_name_;
   struct intr_frame if_;
 
   char *save_ptr = ss->fn_copy;
   bool success = ss->success;
   bool setup = false;
-  printf("The save_ptr is: %s\n", save_ptr);
+
+  char *file, *ugly_ptr;
+
+  file = palloc_get_page (0);
+
+  strlcpy(file, save_ptr, PGSIZE);
+
+  file = strtok_r(file, " ", &ugly_ptr);
+
+  //printf("The save_ptr is: %s\n", save_ptr);
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -89,13 +100,13 @@ start_process (void *file_name_)
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load(save_ptr, &if_.eip, &if_.esp);
+  success = load(file, &if_.eip, &if_.esp);
 
   /* If load failed, quit. */
   if (!success)
   { 
     palloc_free_page (save_ptr);
-    printf("i am doing a thread exit.\n");
+    //printf("i am doing a thread exit.\n");
     sema_up(&(ss->start_synch));
     thread_exit ();
   }
@@ -110,14 +121,15 @@ start_process (void *file_name_)
   int bits = 2;
 
   // Iterate each token
-  for(token = strtok_r(NULL, " ", &save_ptr); token != NULL; 
-                                  token = strtok_r(NULL, " ", &save_ptr))
+  // Strips save_ptr and saves remaining in ugly_ptr
+  for(token = strtok_r(save_ptr, " ", &ugly_ptr); token != NULL; 
+      token = strtok_r(ugly_ptr, " ", &ugly_ptr))
   {
-    printf("Token : %s\n", token);
+
     if_.esp -= (strlen(token) + 1);
     argv[argc] = if_.esp;
     argc++;
-    printf("Arg count is: %d\n", argc);
+    //printf("Arg count is: %d\n", argc);
 
     // If the size of argc is greater than 2 bits
     if(argc >= bits)
@@ -129,7 +141,7 @@ start_process (void *file_name_)
     }    
     // Copy the token (args) in to the save_ptry (the stack)
     memcpy(if_.esp, token, (strlen(token) +1));
-    printf("This is on the stack: %s\n", if_.esp);
+    //printf("This is on the stack: %s\n", if_.esp);
   }
 
   // Need to set the last arg to 0 before setting 
@@ -161,7 +173,7 @@ start_process (void *file_name_)
   {
     if_.esp -= sizeof(char*);
     memcpy(if_.esp, &argv[i], sizeof(char*));
-    printf("Each entry of argv: %s\n", argv[i]);
+    //printf("Each entry of argv: %s\n", argv[i]);
 
     //printf("IF_%d is: %X\n", i, if_.esp);
 
@@ -182,7 +194,7 @@ start_process (void *file_name_)
   // Push on argc
   if_.esp -= sizeof(int);
   memcpy(if_.esp, &argc, sizeof(int));
-  printf("Pushed on argc: %d\n", argc);
+  //printf("Pushed on argc: %d\n", argc);
 
   //printf("Pushed on argc: %X\n", if_.esp);
 
@@ -190,11 +202,11 @@ start_process (void *file_name_)
   // Push on return address
   if_.esp -= sizeof(void *);
   memcpy(if_.esp, &argv[argc] , sizeof(void*));
-  printf("Fake return addr: %d\n", argv[argc]);
+  //printf("Fake return addr: %d\n", argv[argc]);
 
   //printf("Pushed on fake return address: %X\n", if_.esp);
 
-  hex_dump(if_.esp, if_.esp, 32, true);
+  //hex_dump(if_.esp, if_.esp, 32, true);
 
 
   free(argv);
