@@ -235,19 +235,10 @@ wait_info_init(struct wait_info *w_info)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-    // struct wait_info *w_info;
-    // wait_info_init(&w_info);
-    // struct thread *t = thread_current();
-    // struct list_elem *e;
-    // for(e = list_begin(t->wait_info_resources_list); e!=list_end(t->wait_info_resources_list)
-    //               e=list_next(e))
-    // {
-    //   w_info = list_entry(e, struct wait_info, elem);
-    //   if(w_info->child_pid == child_tid)
-    //   {
+  struct thread *t = thread_current();
+  struct list_elem *e;
+  wait_resources_init(&t->w_info);
 
-    //   }
-    // }
   return -1;
 }
 
@@ -257,6 +248,30 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+  // Initialize the monitor
+  /*wait_resources_init(&curr->wait_info);
+  struct list_elem *e;
+
+  // Remove all of the children 
+  for(e = list_begin(&cur->child_list); e!= list_end(&cur->child_list);
+            e = list_next(e))
+  {
+    struct child_info *child = list_entry(e, struct child_info, elem);
+    list_remove(&child->elem);
+    free(child);
+  }
+
+  // Update that the child has exited and signal the other threads
+  if(thread_alive(cur->parent))
+  {
+    if(cur->cp)
+    {
+      cur->cp->child_exit = true;
+      cond_signal(&(cp->wait_info->condition));
+    }
+  }
+  */
+
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */

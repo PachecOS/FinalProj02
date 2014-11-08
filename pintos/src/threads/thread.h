@@ -104,7 +104,8 @@ struct thread
 
     tid_t parent;
     struct list lock;
-    struct list child_list;
+    struct list *child_list;
+    struct child_info *child;
     
     // For system calls using read/write
     struct list *files;
@@ -112,7 +113,6 @@ struct thread
     int fd;
 
     // List of monitors for exit/wait synch
-    struct list wait_info_resources_list;
     struct wait_info *w_info;   /* Process metadata */
 
   };

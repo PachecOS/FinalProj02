@@ -4,6 +4,7 @@
 #include <list.h>
 #include <stdbool.h>
 #include "userprog/process.h"
+#include "threads/thread.h"
 
 /* A counting semaphore. */
 struct semaphore 
@@ -47,14 +48,9 @@ struct wait_info
 {
   struct lock mutex_lock;
   struct condition completed;
-  int status;
-  //pid_t child_pid;
-  bool child_exit;
-  bool parent_exit;
-  bool parent_waiting_on_child;
-
 };
 
+void wait_resources_init(struct wait_info *wf);
 
 /* Optimization barrier.
 

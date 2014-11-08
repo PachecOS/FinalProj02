@@ -227,20 +227,60 @@ void
 exit (int status) 
 {
   struct thread *curr_thread = thread_current();
-  struct list_elem *e;
 
-  if (curr_thread->parent)
-    curr_thread->status = status;
+  /*if (thread_alive(curr_thread->parent))
+  {
+  	if(curr_thread->child)
+  	{
+  		curr_thread->child->status = status;
+  	}
+  }
 
-
-  thread_exit();
+  thread_exit(); */
 }
 /* Runs the executable whose name is given in cmd_line*/
 pid_t
 exec(const char* cmd_line)
 {
 	pid_t name = process_execute(cmd_line);
+	/*struct wait_info *wait_info;
+	wait_resources_init(&wait_info);
+	struct child_info *child;
+	struct thread *t = thread_current();
+	struct list_elem *e, *next;
 
+	for(e = list_begin(&t->child_list); e!= list_end(&t->child_list);
+				e = list_next(e))
+	{
+		struct child_info *keep_child = list_entry(e, struct child_info, elem);
+		if(name == child->pid)
+		{
+			keep_child = child->pid;
+		}
+		else {
+			keep_child = NULL;
+		}
+	}
+
+	while(keep_child->load == 0)
+	{
+		cond_wait(&(wait_info->condition), &(wait_info->mutex_lock));
+	}
+
+	if(keep_child->load == 2)
+	{
+		while(e!=list_end(&t->child_list))
+		{
+			next = list_next(e);
+			child = list_entry(e, struct child_info, elem);
+			list_remove(&child->elem);
+			free(child);
+			e = next;
+		}
+
+	}
+
+	*/
 	return name;
 		
 }

@@ -5,6 +5,13 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
+void
+wait_resources_init(struct wait_info *wf)
+{
+  lock_init(&(wf->mutex_lock));
+  cond_init(&(wf->completed));
+}
+
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:

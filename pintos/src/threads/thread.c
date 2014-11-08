@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -189,7 +190,7 @@ thread_create (const char *name, int priority,
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
 
-  //old_level = intr_disable();
+  old_level = intr_disable();
   
     /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
@@ -207,8 +208,14 @@ thread_create (const char *name, int priority,
   sf->ebp = 0;
   
   intr_set_level (old_level);
-  //t->parent = thread_tid();
+  t->parent = thread_tid();
 
+  // struct child_info *child = malloc(sizeof(struct child_info));
+  // child->child_pid = t->tid;
+  // child->load = -1;
+  // child->wait = false;
+  // list_push_back(&t->child_list, &child->elem);
+  //t->child = child;
 
   /* Add to run queue. */
   thread_unblock (t);
@@ -481,6 +488,7 @@ init_thread (struct thread *t, const char *name, int priority)
 
   list_init(&t->files);
   t->fd = 2;
+  list_init(t->child_list);
   //list_init(&lock);
   intr_set_level (old_level);
 }
