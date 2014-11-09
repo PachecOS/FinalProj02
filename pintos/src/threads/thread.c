@@ -177,7 +177,7 @@ thread_create (const char *name, int priority,
   struct switch_entry_frame *ef;
   struct switch_threads_frame *sf;
   tid_t tid;
-  //enum intr_level old_level;
+  enum intr_level old_level;
 
   ASSERT (function != NULL);
   
@@ -190,7 +190,7 @@ thread_create (const char *name, int priority,
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
 
-  //old_level = intr_disable();
+  old_level = intr_disable();
   
     /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
@@ -207,14 +207,14 @@ thread_create (const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
   
-  //intr_set_level (old_level);
-  //t->parent = thread_tid();
+  intr_set_level (old_level);
+  t->parent = thread_tid();
 
-  // struct child_info *child = malloc(sizeof(struct child_info));
-  // child->child_pid = t->tid;
-  // child->load = -1;
-  // child->wait = false;
-  // list_push_back(&t->child_list, &child->elem);
+   // struct child_info *child = malloc(sizeof(struct child_info));
+   // child->child_pid = t->tid;
+   // child->load = -1;
+   // child->wait = false;
+   // list_push_back(&t->child_list, &child->elem);
   //t->child = child;
 
   /* Add to run queue. */
@@ -488,8 +488,9 @@ init_thread (struct thread *t, const char *name, int priority)
 
   list_init(&t->files);
   t->fd = 2;
-  //list_init(t->child_list);
-  //list_init(&lock);
+  list_init(t->child_list);
+  t->c_info = NULL;
+  t->parent = -1;
   intr_set_level (old_level);
 }
 

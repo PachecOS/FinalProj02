@@ -22,6 +22,8 @@ struct child_info {
 	int pid;
 	struct wait_info *w_info;
 	int load;
+	struct semaphore lock_sema;
+	struct list_elem *elem;
 };
 
 #endif /* userprog/syscall.h */

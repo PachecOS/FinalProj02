@@ -227,7 +227,7 @@ void
 exit (int status) 
 {
  struct thread *curr_thread = thread_current();
- struct list_elem *e;
+ //struct list_elem *e;
 
  if (curr_thread->parent)
  {
@@ -242,46 +242,53 @@ pid_t
 exec(const char* cmd_line)
 {
 	pid_t name = process_execute(cmd_line);
-	/*struct wait_info *wait_info;
-	wait_resources_init(&wait_info);
-	struct child_info *child;
+	struct child_info *c_info;
+	struct child_info *keep_struct;
 	struct thread *t = thread_current();
-	struct list_elem *e, *next;
+	struct list_elem *e, *next = list_begin(&t->child_list);
 
-	for(e = list_begin(&t->child_list); e!= list_end(&t->child_list);
-				e = list_next(e))
+	while(e != list_end(&t->child_list))
 	{
-		struct child_info *keep_child = list_entry(e, struct child_info, elem);
-		if(name == child->pid)
+		next = list_next(e);
+		c_info = list_entry(e, struct child_info, elem);
+		if(name == c_info->pid)
 		{
-			keep_child = child->pid;
-		}
-		else {
-			keep_child = NULL;
+			keep_struct = c_info;
 		}
 	}
 
-	while(keep_child->load == 0)
+	if(!keep_struct)
 	{
-		cond_wait(&(wait_info->condition), &(wait_info->mutex_lock));
+		return -1;
 	}
-
-	if(keep_child->load == 2)
+	// If a success
+	if(keep_struct->load = 1)
 	{
-		while(e!=list_end(&t->child_list))
-		{
-			next = list_next(e);
-			child = list_entry(e, struct child_info, elem);
-			list_remove(&child->elem);
-			free(child);
-			e = next;
-		}
-
+		sema_down(&keep_struct->lock_sema);
 	}
-
-	*/
+	// If youre a failure
+	if(keep_struct->load = 2)
+	{
+		remove_kids_of_mine();
+		return -1;	
+	}
 	return name;
 		
+}
+
+void
+remove_kids_of_mine(void)
+{
+	struct thread *t = thread_current();
+	struct list_elem *e;
+
+	for(e = list_begin(&t->child_list); e != list_end(&t->child_list);
+					e = list_next(e))
+	{
+		struct child_info *c_info = list_entry(e, struct child_info, elem);
+		list_remove(&c_info->elem);
+		free(c_info);
+	}
 }
 
 /* Waits for a child process pid and retrieves the childs
@@ -297,31 +304,31 @@ wait (pid_t pid)
 bool
 create (const char *file, unsigned initial_size)
 {
-	bool created = false;
 	lock_acquire(&lock);
+	bool created = false;
 	if(filesys_create(file, initial_size))
 	{
 		created = true;
-		return created;
 	} else {
-		return created;
+		created = false;
 	}
 	lock_release(&lock);
+	return created;
 }
 
 bool
 remove (const char *file)
 {
-	bool removed = false;
 	lock_acquire(&lock);
+	bool removed = false;
 	if(filesys_remove(file) == true)
 	{
 		removed = true;
-		return removed;
 	} else {
-		return removed;
+		removed = false;
 	}
 	lock_release(&lock);
+	return removed;
 }
 
 int
@@ -330,23 +337,24 @@ open (const char *file)
 	lock_acquire(&lock);
 	struct file *f = filesys_open(file);
 	struct thread *t = thread_current();
-	// Space for the file attr struct 
-	struct file_attr *fa = malloc(sizeof (struct file_attr));
-	fa ->file = f;
 
 	// Need to check if the file attr is valid
-	if(!fa) 
+	if(!f) 
 	{
 		lock_release(&lock);
 		return -1;
 	}
+
+    // Space for the file attr struct 
+	struct file_attr *fa = malloc(sizeof (struct file_attr));
+	fa ->file = f;
+
 	// Update the fd's and the thread's fd
 	fa->fd = t->fd;
 	t->fd++;
 
 	// Put the file elem on that thread's file list
 	list_push_back(t->files, &fa->elem);
-	free(fa);
 	lock_release(&lock);
 	return fa->fd;
 	
@@ -371,11 +379,11 @@ filesize (int fd)
 int
 read (int fd, void *buffer, unsigned size)
 {
-	int i;
-	uint8_t* l_buff = (uint8_t*) buffer;
 
 	if(fd == READ)
 	{
+	    int i;
+	    uint8_t* l_buff = (uint8_t*) buffer;
 		for(i = 0; i < (int)size; i++)
 		{
 			l_buff[i] = input_getc();
@@ -385,6 +393,11 @@ read (int fd, void *buffer, unsigned size)
 
 	lock_acquire(&lock);
 	struct file *f = get_file(fd);
+	if(!f)
+	{	
+		lock_release(&lock);
+		return -1;
+	}
 	int read_f = file_read(f, buffer, size);
 	
 	lock_release(&lock);
@@ -402,6 +415,11 @@ write (int fd, const void *buffer, unsigned size)
 
 	lock_acquire(&lock);
 	struct file *f = get_file(fd);
+	if(!f)
+	{
+		lock_release(&lock);
+		return -1;
+	}
 	int file_w = file_write(f, buffer, size);
 	lock_release(&lock);
 	return file_w;
@@ -446,19 +464,13 @@ close (int fd)
 	for(e=list_begin(t->files); e != list_end(t->files); e = list_next(e))
 	{
 		struct file_attr *fa = list_entry(e, struct file_attr, elem);
-		if(fa->fd == fd)
+		if(fa->fd == fd || fd == -1)
 		{
 			file_close(fa->file);
 			list_remove(&fa->elem);
 			free(fa);
 		}
-		if(fd == -1)
-		{
-			file_close(fa->file);
-			list_remove(&fa->elem);
-			free(fa);
-		}
-		else if(fd > -1)
+		else 
 		{
 			return;
 		}
