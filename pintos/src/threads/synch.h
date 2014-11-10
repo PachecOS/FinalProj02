@@ -48,6 +48,7 @@ struct wait_info
 {
   struct lock mutex_lock;
   struct condition completed;
+  int status;
 };
 
 void wait_resources_init(struct wait_info *wf);

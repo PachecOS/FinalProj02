@@ -16,14 +16,14 @@
 
 #define BOTTOM 0x08048000
 
-
+void strip_args(struct intr_frame *f, int total, int* arg);
+void check_arg(const void* arg);
+struct file* get_file (int fd);
 static void syscall_handler (struct intr_frame *);
 void syscall_init (void);
-int mem_switch_to_kernel(const void * ptr );
+int mem_switch_to_kernel(const void * ptr);
 void check_ptr(const void* addr);
-void strip_args(struct intr_frame *f, int total, int* arg);
-struct file* get_file (int fd);
-void check_arg(const void* arg);
+void validate_buffer(void *buff, unsigned count);
 
 void
 syscall_init (void) 
@@ -74,27 +74,30 @@ syscall_handler (struct intr_frame *f UNUSED)
   	{
   		//printf("REMOVE\n");
   		strip_args(f, 1, &arg[0]);
-  		check_arg((const void*) arg[0]);
+  		check_arg((const void *) arg[0]);
 
-  		arg[0] = mem_switch_to_kernel((const void*) arg[0]);
-  		f->eax = remove((const char*) arg[0]);
+  		arg[0] = mem_switch_to_kernel((const void *) arg[0]);
+  		f->eax = remove((const char *) arg[0]);
   		break;
   	}
   	case SYS_CREATE:
   	{
   		//printf("CREATE\n");
   		strip_args(f, 2, &arg[0]);
-  		check_arg((const void*) arg[0]);
+  		printf("The arg is: %s\n", arg[0]);
+  		check_arg((const void *) arg[0]);
 
   		arg[0] = mem_switch_to_kernel((const void*) arg[0]);
-  		f->eax = create((const char*) arg[0], (unsigned)arg[1]);
+  		printf("Arg[0] is : %s\n", arg[0]);
+  		printf("Arg[1] is : %d\n", arg[1]);
+  		f->eax = create((const char *) arg[0], (unsigned)arg[1]);
   		break;
   	}
   	case SYS_OPEN:
   	{
   		//printf("OPEN\n");
   		strip_args(f, 1, &arg[0]);
-  		check_arg((const void*) arg[0]);
+  		check_arg((const void *) arg[0]);
 
   		arg[0] = mem_switch_to_kernel((const void*) arg[0]);
   		f->eax = open((const char *) arg[0]);
@@ -111,7 +114,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   	{
   		//printf("READ\n");
   		strip_args(f, 3, &arg[0]);
-
+  		validate_buffer((void *) arg[1], (unsigned) arg[2]);
   		arg[1] = mem_switch_to_kernel((const void *) arg[1]);
   		f->eax = read(arg[0], (void *) arg[1], (unsigned) arg[2]);
   		break;
@@ -120,7 +123,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   	{
   		//printf("WRITE\n");
   		strip_args(f, 3, &arg[0]);
-
+  		//validate_buffer((void *) arg[1], (unsigned) arg[2]);
   		arg[1] = mem_switch_to_kernel((const void *) arg[1]);
   		f->eax = write(arg[0], (const void *) arg[1], (unsigned) arg[2]);
   		break;
@@ -151,6 +154,18 @@ syscall_handler (struct intr_frame *f UNUSED)
 }
 
 void
+validate_buffer(void *buff, unsigned count)
+{	
+	char *l_buff = (char *) buff;
+	unsigned index;
+
+	for(index = 0; index < count; index++)
+	{
+		l_buff++;
+	}
+}
+
+void
 check_arg(const void* arg) {
 
 	while (* (char *) mem_switch_to_kernel(arg) != 0)
@@ -168,7 +183,6 @@ mem_switch_to_kernel(const void * ptr )
 {
 
 	check_ptr(ptr);
-
 	struct thread *t = thread_current();
 	uint32_t page = (uint32_t)t->pagedir;
 	void * valid = pagedir_get_page((uint32_t *)page, ptr);
@@ -190,15 +204,13 @@ check_ptr(const void* addr)
 	{
 		exit(-1);
 	}
-	if(!(addr < (void *)PHYS_BASE))
+	if(!(addr <= (void *)PHYS_BASE))
 	{
 		exit(-1);
 	}
-	if(!is_user_vaddr(addr))
-	{
+	if(!is_user_vaddr(addr)) {
 		exit(-1);
 	}
-
 }
 
 /* Gets the args off of the stack */
@@ -213,6 +225,7 @@ strip_args(struct intr_frame *f, int total, int* arg)
 		check_ptr((const void*)temp);
 		arg[i] = *temp;
 	}
+
 }
 
 /* Terminates Pintos by calling shutdown_power_off() */
@@ -238,44 +251,46 @@ exit (int status)
   thread_exit();
 }
 /* Runs the executable whose name is given in cmd_line*/
+
 pid_t
 exec(const char* cmd_line)
 {
 	pid_t name = process_execute(cmd_line);
-	struct child_info *c_info;
-	struct child_info *keep_struct;
-	struct thread *t = thread_current();
-	struct list_elem *e, *next = list_begin(&t->child_list);
+	// struct child_info *c_info;
+	// struct child_info *keep_struct;
+	// struct thread *t = thread_current();
+	// struct list_elem *e, *next = list_begin(&t->child_list);
 
-	while(e != list_end(&t->child_list))
-	{
-		next = list_next(e);
-		c_info = list_entry(e, struct child_info, elem);
-		if(name == c_info->pid)
-		{
-			keep_struct = c_info;
-		}
-	}
+	// while(e != list_end(&t->child_list))
+	// {
+	// 	next = list_next(e);
+	// 	c_info = list_entry(e, struct child_info, elem);
+	// 	if(name == c_info->pid)
+	// 	{
+	// 		keep_struct = c_info;
+	// 	}
+	// }
 
-	if(!keep_struct)
-	{
-		return -1;
-	}
-	// If a success
-	if(keep_struct->load = 1)
-	{
-		sema_down(&keep_struct->lock_sema);
-	}
-	// If youre a failure
-	if(keep_struct->load = 2)
-	{
-		remove_kids_of_mine();
-		return -1;	
-	}
+	// if(!keep_struct)
+	// {
+	// 	return -1;
+	// }
+	// // If a success
+	// if(keep_struct->load = 1)
+	// {
+	// 	sema_down(&keep_struct->lock_sema);
+	// }
+	// // If youre a failure
+	// if(keep_struct->load = 2)
+	// {
+	// 	remove_kids_of_mine();
+	// 	return -1;	
+	// }
 	return name;
 		
 }
 
+/*
 void
 remove_kids_of_mine(void)
 {
@@ -290,7 +305,7 @@ remove_kids_of_mine(void)
 		free(c_info);
 	}
 }
-
+*/
 /* Waits for a child process pid and retrieves the childs
    exit status */
 int
@@ -309,7 +324,9 @@ create (const char *file, unsigned initial_size)
 	if(filesys_create(file, initial_size))
 	{
 		created = true;
-	} else {
+	}
+	else 
+	{
 		created = false;
 	}
 	lock_release(&lock);
@@ -320,13 +337,7 @@ bool
 remove (const char *file)
 {
 	lock_acquire(&lock);
-	bool removed = false;
-	if(filesys_remove(file) == true)
-	{
-		removed = true;
-	} else {
-		removed = false;
-	}
+	bool removed = filesys_remove(file);
 	lock_release(&lock);
 	return removed;
 }
@@ -335,8 +346,10 @@ int
 open (const char *file)
 {
 	lock_acquire(&lock);
-	struct file *f = filesys_open(file);
-	struct thread *t = thread_current();
+	struct file *f;
+	f = filesys_open(file);
+	struct thread *t;
+	t = thread_current();
 
 	// Need to check if the file attr is valid
 	if(!f) 
@@ -346,8 +359,9 @@ open (const char *file)
 	}
 
     // Space for the file attr struct 
-	struct file_attr *fa = malloc(sizeof (struct file_attr));
-	fa ->file = f;
+	struct file_attr *fa;
+	fa = malloc(sizeof(struct file_attr));
+	fa->file = f;
 
 	// Update the fd's and the thread's fd
 	fa->fd = t->fd;
@@ -470,10 +484,10 @@ close (int fd)
 			list_remove(&fa->elem);
 			free(fa);
 		}
-		else 
-		{
+		else {
 			return;
 		}
+
 	}
 	lock_release(&lock);
 
